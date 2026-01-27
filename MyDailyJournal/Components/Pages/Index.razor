@@ -1,0 +1,212 @@
+@page "/"
+@inject JournalService JournalService
+@inject StreakService StreakService
+@inject NavigationManager Navigation
+
+
+
+<PageTitle>Dashboard - My Daily Journal</PageTitle>
+
+<div class="dashboard">
+    @* Welcome Header *@
+    <div class="card mb-4" style="background: linear-gradient(135deg, #673AB7 0%, #9C27B0 100%); color: white;">
+        <div class="card-body p-4">
+            <h1 class="display-4">Welcome Back! 👋</h1>
+            <p class="lead mb-0">@DateTime.Now.ToString("dddd, MMMM dd, yyyy")</p>
+        </div>
+    </div>
+
+    @* Streak Cards *@
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-center p-4" style="background: #FFF3E0;">
+                <h6 class="text-muted mb-2">Current Streak</h6>
+                <h1 class="display-3 mb-2" style="color: #FF6B6B;">@_currentStreak</h1>
+                <p class="text-muted mb-0">days</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center p-4" style="background: #E8F5E9;">
+                <h6 class="text-muted mb-2">Longest Streak</h6>
+                <h1 class="display-3 mb-2" style="color: #4CAF50;">@_longestStreak</h1>
+                <p class="text-muted mb-0">days</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center p-4" style="background: #E3F2FD;">
+                <h6 class="text-muted mb-2">Total Entries</h6>
+                <h1 class="display-3 mb-2" style="color: #2196F3;">@_totalEntries</h1>
+                <p class="text-muted mb-0">entries</p>
+            </div>
+        </div>
+    </div>
+
+    @* Quick Actions *@
+    <div class="card mb-4">
+        <div class="card-body">
+            <h3 class="mb-4">📝 Quick Actions</h3>
+            <div class="d-grid gap-2">
+                <button class="btn btn-primary btn-lg" @onclick="GoToJournalEntry">
+                    ✍️ Write Today's Entry
+                </button>
+                <button class="btn btn-outline-primary btn-lg" @onclick="GoToCalendar">
+                    📚 View All Entries
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @* Recent Entries *@
+    <div class="card">
+        <div class="card-body">
+            <h3 class="mb-4">📖 Recent Entries</h3>
+            @if (_isLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Loading your entries...</p>
+                </div>
+            }
+            else if (_recentEntries != null && _recentEntries.Any())
+            {
+                <div class="list-group">
+                    @foreach (var entry in _recentEntries)
+                    {
+                        <div class="list-group-item list-group-item-action" @onclick="@(() => ViewEntry(entry.Id))">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <span style="font-size: 32px; margin-right: 15px;">@entry.PrimaryMood.Emoji</span>
+                                    <div>
+                                        <h5 class="mb-1">@entry.Title</h5>
+                                        <small>@entry.EntryDate.ToString("MMM dd, yyyy")</small>
+                                    </div>
+                                </div>
+                                <small class="text-muted">@entry.WordCount words</small>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <h2 style="font-size: 64px;">📔</h2>
+                    <p class="text-muted">No entries yet. Start writing today! 🎉</p>
+                    <button class="btn btn-primary mt-3" @onclick="GoToJournalEntry">
+                        ✍️ Write Your First Entry
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    // Variables to store data
+    private int _currentStreak;
+    private int _longestStreak;
+    private int _totalEntries;
+    private List<Models.JournalEntry> _recentEntries = new List<Models.JournalEntry>();
+    private bool _isLoading = true;
+
+    // This runs when the page loads
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    // Load all dashboard data
+    private async Task LoadData()
+    {
+        _isLoading = true;
+        
+        try
+        {
+            // Get streak information
+            var streakInfo = await StreakService.GetStreakInfo();
+            _currentStreak = streakInfo.current;
+            _longestStreak = streakInfo.longest;
+            _totalEntries = streakInfo.total;
+
+            // Get recent entries (last 30 days)
+            var allEntries = await JournalService.GetEntries(
+                startDate: DateTime.Now.AddDays(-30),
+                endDate: DateTime.Now
+            );
+            
+            // Take only the 5 most recent
+            _recentEntries = allEntries.Take(5).ToList();
+        }
+        catch (Exception ex)
+        {
+            // Log error or show message to user
+            Console.WriteLine($"Error loading data: {ex.Message}");
+            _recentEntries = new List<Models.JournalEntry>();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    // Navigate to journal entry page
+    private void GoToJournalEntry()
+    {
+        Navigation.NavigateTo("/journal-entry");
+    }
+
+    // Navigate to calendar page
+    private void GoToCalendar()
+    {
+        Navigation.NavigateTo("/calendar");
+    }
+
+    // View a specific entry
+    private void ViewEntry(int entryId)
+    {
+        Navigation.NavigateTo($"/journal-entry/{entryId}");
+    }
+}
+
+<style>
+    .dashboard {
+        padding: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .card {
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .list-group-item {
+        cursor: pointer;
+        border-left: 4px solid transparent;
+        transition: all 0.2s;
+    }
+
+    .list-group-item:hover {
+        border-left-color: #673AB7;
+        background-color: #F3E5F5;
+    }
+
+    .btn {
+        border-radius: 8px;
+        font-weight: 600;
+    }
+
+    .spinner-border {
+        width: 3rem;
+        height: 3rem;
+    }
+</style>

@@ -1,0 +1,454 @@
+@page "/journal-entry"
+@page "/journal-entry/{EntryId:int}"
+@inject JournalService JournalService
+@inject StreakService _streakService
+@inject NavigationManager Navigation
+@using Markdig
+@using PSC.Blazor.Components.MarkdownEditor.Enums
+
+
+<PageTitle>Write Entry - My Daily Journal</PageTitle>
+
+<div class="journal-entry-page">
+    <div class="card">
+        <div class="card-body p-4">
+            <h2 class="mb-4">✍️ @PageTitle</h2>
+
+            @if (_isLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <EditForm Model="@this" OnValidSubmit="@SaveEntry">
+
+                    <!-- Title -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Title</label>
+                        <input type="text"
+                               class="form-control form-control-lg"
+                               @bind="_title"
+                               placeholder="Give your entry a title..."
+                               maxlength="200" />
+                    </div>
+
+                    <!-- Mood Selection -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            How are you feeling? (Pick your main mood)
+                        </label>
+
+                        <div class="mood-grid">
+                            @foreach (var mood in _moods)
+                            {
+                                <button type="button"
+                                        class="mood-btn @(_selectedMoodId == mood.Id ? "selected" : "")"
+                                        @onclick="@(() => SelectMood(mood.Id))">
+
+                                    <span style="font-size:48px;">@mood.Emoji</span>
+                                    <p class="mb-0 mt-2 small">@mood.Name</p>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                    <!-- Content -->
+                    <div class="row">
+                                
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">Write your journal</label>
+
+                        <MarkdownEditor @bind-Value="_content"
+                                        ValueHTMLChanged="OnMarkdownHtmlChanged"
+                                        SpellChecker="false"
+                                        @ref="JournalEditor">
+
+                            <Toolbar>
+                                <MarkdownToolbarButton Action="MarkdownAction.Bold" Title="Bold"/>
+                                <MarkdownToolbarButton Action="MarkdownAction.Italic" Title="Italic"/>
+                                <MarkdownToolbarButton Action="MarkdownAction.Heading" Title="Heading"/>
+                                <MarkdownToolbarButton Action="MarkdownAction.UnorderedList" Title="List"/>
+                                <MarkdownToolbarButton Action="MarkdownAction.Link" Title="Link"/>
+                            </Toolbar>
+
+                        </MarkdownEditor>
+                    </div>
+                    </div>
+
+
+                            
+      
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Preview</label>
+                        <div class="border p-3 preview-box">
+                            @MarkdownPreview
+                        </div>
+
+
+                        <div class="border p-3 preview-box">
+                            @((MarkupString)Markdown.ToHtml(_content ?? string.Empty))
+                        </div>
+                    </div>
+                    <!-- TAGS -->
+                    <h5>🏷️ Tags</h5>
+
+                    <div class="tag-grid">
+                        @foreach (var tag in _allTags)
+                        {
+                            <label class="tag-item">
+                                <input type="checkbox"
+                                       checked="@_selectedTagIds.Contains(tag.Id)"
+                                       @onchange="(e) => ToggleTag(tag.Id, (bool)e.Value)" />
+                                <span>@tag.Name</span>
+                            </label>
+                        }
+                    </div>
+
+                    <div class="mt-2">
+                        <input class="form-control"
+                               placeholder="Add custom tag"
+                               @bind="CustomTag"
+                               @bind:event="oninput" />
+
+                        <button class="btn btn-sm btn-secondary mt-1"
+                                @onclick="AddCustomTag">
+                            ➕ Add Tag
+                        </button>
+                    </div>
+
+                    
+
+
+
+                    <!-- Messages -->
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger">@_errorMessage</div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(_successMessage))
+                    {
+                        <div class="alert alert-success">@_successMessage</div>
+                    }
+
+                    <!-- Buttons -->
+                    <div class="d-grid gap-2">
+                        <button type="submit"
+                                class="btn btn-primary btn-lg"
+                                disabled="@_isSaving">
+
+                            @if (_isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"
+                                      role="status"></span>
+                                <span>Saving...</span>
+                            }
+                            else
+                            {
+                                <span>💾 Save Entry</span>
+                            }
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                @onclick="GoBack">
+                            Cancel
+                        </button>
+                    </div>
+
+                </EditForm>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+
+    [Parameter]
+    public int? EntryId { get; set; }
+
+    private const string PageTitle = "Write Today's Entry";
+    private string _title = string.Empty;
+    private string _content = string.Empty;
+    private int _selectedMoodId;
+
+    private List<Mood> _moods = new();
+
+    private string _errorMessage = string.Empty;
+    private string _successMessage = string.Empty;
+
+    private bool _isLoading = true;
+    private bool _isSaving;
+
+    private int WordCount =>
+        string.IsNullOrWhiteSpace(_content)
+            ? 0
+            : _content.Split(
+                new[] { ' ', '\n', '\r' },
+                StringSplitOptions.RemoveEmptyEntries
+              ).Length;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMoods();
+
+        if (IsEditMode)
+        {
+            await LoadEntry();
+        }
+
+        _isLoading = false;
+        _allTags = await JournalService.GetAllTags();
+
+        // Load selected tags if editing
+        if (EntryId != null)
+        {
+            var entry = await JournalService.GetEntryForDate(DateTime.Today); // or GetEntryById(EntryId.Value)
+            _selectedTagIds = entry.EntryTags.Select(et => et.TagId).ToList();
+        }
+    }
+
+    string markdownValue = "#Markdown Editor\nThis is a test";
+    string markdownHtml;
+
+    Task OnMarkdownValueChanged(string value)
+    {
+        return Task.CompletedTask;
+    }
+    private MarkdownEditor? JournalEditor;
+    private string _markdownHtml = string.Empty;
+
+    private Task OnMarkdownHtmlChanged(string html)
+    {
+        _markdownHtml = html;
+        return Task.CompletedTask;
+    }
+
+
+    private List<Tag> _allTags = new();
+    private List<int> _selectedTagIds = new();
+    private string CustomTag = "";
+
+   
+
+    void ToggleTag(int tagId, bool isChecked)
+    {
+        if (isChecked && !_selectedTagIds.Contains(tagId))
+            _selectedTagIds.Add(tagId);
+        else if (!isChecked && _selectedTagIds.Contains(tagId))
+            _selectedTagIds.Remove(tagId);
+    }
+
+    async Task AddCustomTag()
+    {
+        if (!string.IsNullOrWhiteSpace(CustomTag))
+        {
+            // Create in DB if it doesn't exist
+            var tag = await JournalService.CreateCustomTag(CustomTag.Trim());
+            _allTags.Add(tag);
+            _selectedTagIds.Add(tag.Id);
+            CustomTag = "";
+        }
+    }
+
+
+
+
+    private async Task LoadMoods()
+    {
+        try
+        {
+            _moods = await JournalService.GetAllMoods();
+
+            if (_selectedMoodId == 0 && _moods.Any())
+            {
+                _selectedMoodId = _moods.First().Id;
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error loading moods: {ex.Message}";
+            _moods = new();
+        }
+    }
+    
+    private readonly MarkdownPipeline _markdownPipeline =
+        new MarkdownPipelineBuilder()
+            .UseAdvancedExtensions()
+            .Build();
+
+    private MarkupString MarkdownPreview =>
+        (MarkupString)Markdown.ToHtml(_content ?? string.Empty, _markdownPipeline);
+
+
+    private void SelectMood(int moodId)
+    {
+        _selectedMoodId = moodId;
+        _errorMessage = string.Empty;
+    }
+    private Models.JournalEntry _editingEntry;
+    private List<int> _secondaryMoodIds;
+    private int? _selectedCategoryId;
+    private bool IsEditMode => EntryId.HasValue;
+
+
+    private async Task SaveEntry()
+    {
+        _errorMessage = string.Empty;
+        _successMessage = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(_title))
+        {
+            _errorMessage = "Please enter a title";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_content))
+        {
+            _errorMessage = "Please write something in your entry";
+            return;
+        }
+
+        if (_selectedMoodId == 0)
+        {
+            _errorMessage = "Please select a mood";
+            return;
+        }
+
+        _isSaving = true;
+
+        try
+        {
+            if (IsEditMode && _editingEntry != null)
+            {
+                await JournalService.UpdateEntry(
+                    _editingEntry.Id,
+                    _title,
+                    _content,
+                    _selectedMoodId,
+                    _secondaryMoodIds ?? new List<int>(),
+                    _selectedCategoryId,
+                    _selectedTagIds ?? new List<int>()
+                );
+            }
+            else
+            {
+                await JournalService.CreateEntry(
+                    DateTime.Today,
+                    _title,
+                    _content,
+                    _selectedMoodId,
+                    _secondaryMoodIds ?? new List<int>(),
+                    _selectedCategoryId,
+                    _selectedTagIds ?? new List<int>()
+                );
+            }
+
+            // Update streak
+            await _streakService.UpdateStreak(DateTime.Today);
+
+            _successMessage = "✅ Entry saved successfully!";
+            Navigation.NavigateTo("/", true);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error saving entry: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+
+
+    public async Task LoadEntry()
+    {
+        var entry = await JournalService.GetEntries()
+            .ContinueWith(t => t.Result.FirstOrDefault(e => e.Id == EntryId));
+
+        if (entry == null)
+        {
+            _errorMessage = "Entry not found.";
+            return;
+        }
+
+        _editingEntry = entry;
+        _title = entry.Title;
+        _content = entry.Content;
+        _selectedMoodId = entry.PrimaryMoodId;
+    }
+
+
+    public int Id { get; set; }
+
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/");
+    }
+}
+
+<style>
+    .journal-entry-page {
+        max-width: 900px;
+        margin: 20px auto;
+        padding: 20px;
+    }
+    .preview-box {
+        min-height: 350px;
+        background: #fafafa;
+    }
+
+
+    .mood-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .mood-btn {
+        border: 2px solid #E0E0E0;
+        background: white;
+        padding: 15px;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-align: center;
+    }
+
+    .mood-btn:hover {
+        border-color: #673AB7;
+        background: #F3E5F5;
+        transform: translateY(-2px);
+    }
+
+    .form-control:focus {
+        border-color: #673AB7;
+        box-shadow: 0 0 0 0.2rem rgba(103, 58, 183, 0.25);
+    }
+
+    textarea.form-control {
+        font-size: 16px;
+        line-height: 1.6;
+    }
+    .markdown-toolbar button {
+        border: 1px solid #ccc;
+        background: #fff;
+        padding: 6px 10px;
+        margin-right: 5px;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+
+    .markdown-toolbar button:hover {
+        background: #673AB7;
+        color: white;
+    }
+
+</style>
+
