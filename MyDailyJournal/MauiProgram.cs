@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using MudBlazor.Services;
 using MyDailyJournal.MauiBlazor.Services;
 using MyDailyJournal.Services;
 
@@ -28,7 +29,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<AuthenticationService>();
         builder.Services.AddSingleton<JournalService>();
         builder.Services.AddSingleton<StreakService>();
-        
+        builder.Services.AddMudServices();
+
         using var scope = builder.Services.BuildServiceProvider();
         using var journalDbContext = new JournalDbContext();
         journalDbContext.Database.Migrate();

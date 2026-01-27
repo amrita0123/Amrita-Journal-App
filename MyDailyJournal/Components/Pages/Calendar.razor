@@ -1,32 +1,55 @@
 @page "/calendar"
+using Heron.MudCalendar;
+@inject JournalService JournalService
+@inject NavigationManager Navigation
 
-<PageTitle>Calendar - My Daily Journal</PageTitle>
+<MudCalendar Items="@CalendarItems"
+             OnEventClick="OnEntryClicked" />
 
-<div class="calendar-page">
-    <div class="card">
-        <div class="card-body p-4">
-            <h2 class="mb-4">📅 Calendar</h2>
-            <p class="text-center text-muted py-5">
-                Calendar view coming soon! 🚀
-            </p>
-        </div>
-    </div>
-</div>
 
-@code
- 
-{
+@code {
 
+    private class MudCalendarEvent
+    {
+        public DateTime Start { get; set; }
+        public DateTime End { get; set; }
+        public string Title { get; set; }
+        public string CssClass { get; set; }
+        public int Data { get; set; }
+    }
+
+    private List<MudCalendarEvent> CalendarItems = new();
+    protected override async Task OnInitializedAsync()
+    {
+        var entries = await JournalService.GetEntries();
     
-// Calendar functionality will be implemented here
+        CalendarItems = entries.Select(e => new MudCalendarEvent
+        {
+            Start = e.EntryDate,       // Date of the entry
+            End = e.EntryDate,         // Same day
+            Title = e.Title,           // Title for display
+            CssClass = "entry-date",   // Optional CSS for highlighting
+            Data = e.Id                // Store JournalEntry Id for navigation
+        }).ToList();
+    }
+
+    private void OnEntryClicked(MudCalendarEvent e)
+    {
+        if (e.Data is int entryId)
+        {
+            // Go to the journal entry page
+            Navigation.NavigateTo($"/journal-entry/{entryId}");
+        }
+    }
+
+    <style>
+        .entry-date {
+            background-color: #673AB7;
+            color: white;
+            border-radius: 50%;
+        }
+
+    </style>
+
 
 }
-
-
-<style>
-    .calendar-page {
-        max-width: 1200px;
-        margin: 20px auto;
-        padding: 20px;
-    }
-</style>
