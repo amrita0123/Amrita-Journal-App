@@ -1,5 +1,8 @@
 ﻿@inherits LayoutComponentBase
 
+<MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="@_theme" />
+<MudSnackbarProvider />
+
 <div class="page">
     <div class="sidebar">
         <NavMenu/>
@@ -7,6 +10,16 @@
 
     <main>
         <div class="top-row px-4">
+            <button @onclick="ToggleTheme" class="btn btn-sm">
+                @if (_isDarkMode)
+                {
+                    <span>☀️ Light Mode</span>
+                }
+                else
+                {
+                    <span>🌙 Dark Mode</span>
+                }
+            </button>
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
         </div>
 
@@ -15,3 +28,37 @@
         </article>
     </main>
 </div>
+
+@code {
+    private bool _isDarkMode = false;
+    
+    private MudTheme _theme = new MudTheme()
+    {
+        // PaletteLight
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#673AB7",
+            Secondary = "#9C27B0",
+            Background = "#F5F5F5",
+            Surface = "#FFFFFF",
+            TextPrimary = "rgba(0,0,0,0.87)",
+            TextSecondary = "rgba(0,0,0,0.54)"
+        },
+        
+        //  PaletteDark 
+        PaletteDark = new PaletteDark()
+        {
+            Primary = "#BB86FC",
+            Secondary = "#03DAC6",
+            Background = "#121212",
+            Surface = "#1E1E1E",
+            TextPrimary = "rgba(255,255,255,0.87)",
+            TextSecondary = "rgba(255,255,255,0.60)"
+        }
+    };
+    
+    private void ToggleTheme()
+    {
+        _isDarkMode = !_isDarkMode;
+    }
+}

@@ -30,6 +30,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<JournalService>();
         builder.Services.AddSingleton<StreakService>();
         builder.Services.AddMudServices();
+        
 
         using var scope = builder.Services.BuildServiceProvider();
         using var journalDbContext = new JournalDbContext();

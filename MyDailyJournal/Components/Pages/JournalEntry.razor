@@ -183,7 +183,7 @@
     private bool _isLoading = true;
     private bool _isSaving;
 
-    private int WordCount =>
+    public int WordCount =>
         string.IsNullOrWhiteSpace(_content)
             ? 0
             : _content.Split(
@@ -384,6 +384,9 @@
 
 
     public int Id { get; set; }
+    public object PrimaryMood { get; set; }
+    public object Title { get; set; }
+    public object EntryDate { get; set; }
 
 
     private void GoBack()
@@ -442,13 +445,5 @@
         padding: 6px 10px;
         margin-right: 5px;
         border-radius: 6px;
-        cursor: pointer;
     }
-
-    .markdown-toolbar button:hover {
-        background: #673AB7;
-        color: white;
-    }
-
-</style>
-
+    </style>

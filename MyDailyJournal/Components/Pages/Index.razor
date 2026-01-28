@@ -8,14 +8,9 @@
 <PageTitle>Dashboard - My Daily Journal</PageTitle>
 
 <div class="dashboard">
-    @* Theme Customization *@
-    <MudThemeProvider @bind="@_isDarkMode" Theme="MyCustomTheme" />
-    <MudToggleIconButton @bind="@_isDarkMode"
-                         Icon="@Icons.Material.Filled.DarkMode" Color="@Color.Default"
-                         ToggledIcon="@Icons.Material.Filled.WbSunny" ToggledColor="Color.Default" />
-                        
     
-    
+    @* Add to Index.razor *@
+
     
     @* Welcome Header *@
     <div class="card mb-4" style="background: linear-gradient(135deg, #673AB7 0%, #9C27B0 100%); color: white;">
@@ -78,7 +73,7 @@
                     <p class="mt-3 text-muted">Loading your entries...</p>
                 </div>
             }
-            else if (_recentEntries != null && _recentEntries.Any())
+            else if (_recentEntries.Any())
             {
                 <div class="list-group">
                     @foreach (var entry in _recentEntries)
@@ -113,36 +108,15 @@
 </div>
 
 @code {
-    
-    // Theme Customization 
-    private bool _isDarkMode;
-
-    MudTheme MyCustomTheme = new MudTheme()
-    {
-        PaletteLight = new PaletteLight()
-        {
-            Primary = Colors.DeepPurple.Darken2,
-            Secondary = Colors.Green.Accent4,
-            AppbarBackground = Colors.BlueGray.Darken3,
-            
-            
-        },
-        PaletteDark = new PaletteDark()
-        {
-            Primary = Colors.Blue.Darken4,
-            Secondary = Colors.Green.Accent4,
-            AppbarBackground = Colors.Gray.Darken3,
-        },
-        
-
-    };
-    
     // Variables to store data
     private int _currentStreak;
     private int _longestStreak;
     private int _totalEntries;
     private List<Models.JournalEntry> _recentEntries = new List<Models.JournalEntry>();
     private bool _isLoading = true;
+    
+    private bool _isDarkMode = false;
+
 
     // This runs when the page loads
     protected override async Task OnInitializedAsync()
