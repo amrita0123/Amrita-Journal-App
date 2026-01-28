@@ -30,6 +30,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<JournalService>();
         builder.Services.AddSingleton<StreakService>();
         builder.Services.AddMudServices();
+        builder.Services.AddScoped<MoodService>();
+
         
 
         using var scope = builder.Services.BuildServiceProvider();

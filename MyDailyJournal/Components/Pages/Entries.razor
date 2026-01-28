@@ -1,9 +1,55 @@
 @page "/entries"
 @using Microsoft.AspNetCore.Components.Rendering
+@inject MoodService MoodService
 @inject JournalService JournalService
 @inject NavigationManager Navigation
 
+
+
 <PageTitle>All Journal Entries</PageTitle>
+<div class="card p-3 mb-4">
+    <div class="row g-3">
+
+        <!-- Search -->
+        <div class="col-md-4">
+            <input class="form-control"
+                   placeholder="Search title or content..."
+                   @bind="_searchText" />
+        </div>
+
+        <!-- Date range -->
+        <div class="col-md-3">
+            <input type="date" class="form-control"
+                   @bind="_startDate" />
+        </div>
+
+        <div class="col-md-3">
+            <input type="date" class="form-control"
+                   @bind="_endDate" />
+        </div>
+
+        <!-- Mood -->
+        <div class="col-md-2">
+            <select class="form-select" @bind="_selectedMoodId">
+                <option value="">All Moods</option>
+                @foreach (var mood in _moods)
+                {
+                    <option value="@mood.Id">@mood.Name</option>
+                }
+            </select>
+        </div>
+
+        <!-- Apply -->
+        <div class="col-md-12 text-end">
+            <button class="btn btn-primary"
+                    @onclick="ApplyFilters">
+                🔍 Apply Filters
+            </button>
+        </div>
+
+    </div>
+</div>
+
 <div class="container mt-4">
     <h2 class="mb-4">📘 Journal Entries</h2>
 
@@ -83,23 +129,50 @@
     private int _currentPage = 1;
     private int _pageSize = 10;
     private int _totalPages;
+    
+    private string _searchText;
+    private DateTime? _startDate;
+    private DateTime? _endDate;
+    private int? _selectedMoodId;
+
+    private List<Mood> _moods = new();
+    private List<int> _selectedTagIds = new();
+
 
     protected override async Task OnInitializedAsync()
     {
+        _moods = await MoodService.GetAllMoods();
+
         await LoadPage();
     }
+
 
     private async Task LoadPage()
     {
         _loading = true;
 
-        var result = await JournalService.GetPaginatedEntries(_currentPage, _pageSize);
+        var result = await JournalService.SearchAndFilterEntries(
+            _searchText,
+            _startDate,
+            _endDate,
+            _selectedMoodId,
+            _selectedTagIds,
+            _currentPage,
+            _pageSize
+        );
 
         _entries = result.entries;
         _totalPages = (int)Math.Ceiling(result.totalCount / (double)_pageSize);
 
         _loading = false;
     }
+    private async Task ApplyFilters()
+    {
+        _currentPage = 1;
+        await LoadPage();
+    }
+
+
 
     private async Task NextPage()
     {

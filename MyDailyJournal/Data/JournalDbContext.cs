@@ -110,5 +110,7 @@ using MyDailyJournal.Models;
                 new StreakTracking { Id = 1, CurrentStreak = 0, LongestStreak = 0, TotalEntries = 0 }
             );
         }
+        public DbSet<AppSecurity> AppSecurity { get; set; }
+
     }
     
