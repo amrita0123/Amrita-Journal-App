@@ -337,5 +337,84 @@ namespace MyDailyJournal.Services
             
             return tag;
         }
+        
+        public async Task<(List<JournalEntry> entries, int totalCount)> 
+            GetPaginatedEntries(int pageNumber, int pageSize)
+        {
+            using var db = new JournalDbContext();
+
+            var query = db.JournalEntries
+                .Include(e => e.PrimaryMood)
+                .Include(e => e.EntryTags)
+                .ThenInclude(et => et.Tag)
+                .OrderByDescending(e => e.EntryDate);
+
+            var totalCount = await query.CountAsync();
+
+            var entries = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (entries, totalCount);
+        }
+        
+        public async Task<(List<JournalEntry> entries, int totalCount)>
+            SearchAndFilterEntries(
+                string searchText,
+                DateTime? startDate,
+                DateTime? endDate,
+                int? moodId,
+                List<int> tagIds,
+                int pageNumber,
+                int pageSize)
+        {
+            using var db = new JournalDbContext();
+
+            var query = db.JournalEntries
+                .Include(e => e.PrimaryMood)
+                .Include(e => e.EntryTags)
+                .ThenInclude(et => et.Tag)
+                .AsQueryable();
+
+            // 🔍 Search by title or content
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(e =>
+                    e.Title.Contains(searchText) ||
+                    e.Content.Contains(searchText));
+            }
+
+            // 📅 Date range filter
+            if (startDate.HasValue)
+                query = query.Where(e => e.EntryDate >= startDate.Value);
+
+            if (endDate.HasValue)
+                query = query.Where(e => e.EntryDate <= endDate.Value);
+
+            // 😊 Mood filter
+            if (moodId.HasValue)
+                query = query.Where(e => e.PrimaryMoodId == moodId.Value);
+
+            // 🏷️ Tag filter
+            if (tagIds != null && tagIds.Any())
+            {
+                query = query.Where(e =>
+                    e.EntryTags.Any(t => tagIds.Contains(t.TagId)));
+            }
+
+            query = query.OrderByDescending(e => e.EntryDate);
+
+            var totalCount = await query.CountAsync();
+
+            var entries = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (entries, totalCount);
+        }
+
+
     }
 }

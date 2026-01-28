@@ -3,6 +3,7 @@
 @inject JournalService JournalService
 @inject StreakService _streakService
 @inject NavigationManager Navigation
+@using System.Collections
 @using Markdig
 @using PSC.Blazor.Components.MarkdownEditor.Enums
 
@@ -387,6 +388,7 @@
     public object PrimaryMood { get; set; }
     public object Title { get; set; }
     public object EntryDate { get; set; }
+    public IEnumerable EntryTags { get; set; }
 
 
     private void GoBack()

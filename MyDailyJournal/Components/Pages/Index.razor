@@ -5,6 +5,7 @@
 
 
 
+
 <PageTitle>Dashboard - My Daily Journal</PageTitle>
 
 <div class="dashboard">
@@ -53,9 +54,11 @@
                 <button class="btn btn-primary btn-lg" @onclick="GoToJournalEntry">
                     ✍️ Write Today's Entry
                 </button>
-                <button class="btn btn-outline-primary btn-lg" @onclick="GoToCalendar">
+                <button class="btn btn-outline-primary btn-lg"
+                        @onclick="Entries">
                     📚 View All Entries
                 </button>
+
             </div>
         </div>
     </div>
@@ -177,6 +180,12 @@
     {
         Navigation.NavigateTo($"/journal-entry/{entryId}");
     }
+
+    private void Entries()
+    {
+        throw new NotImplementedException();
+    }
+
 }
 
 <style>
