@@ -1,0 +1,41 @@
+@page "/lock"
+@inject SecurityService SecurityService
+@inject NavigationManager Navigation
+
+
+<div class="container text-center mt-5">
+    <h2>🔒 Journal Locked</h2>
+    <p>Enter your PIN to continue</p>
+
+    <input type="password"
+           class="form-control text-center mb-3"
+           maxlength="6"
+           @bind="_pin" />
+
+    <button class="btn btn-primary"
+            @onclick="Unlock">
+        Unlock
+    </button>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <p class="text-danger mt-3">@_error</p>
+    }
+</div>
+
+@code {
+    private string _pin;
+    private string _error;
+
+    private async Task Unlock()
+    {
+        if (await SecurityService.VerifyPin(_pin))
+        {
+            Navigation.NavigateTo("/", true);
+        }
+        else
+        {
+            _error = "Incorrect PIN";
+        }
+    }
+}

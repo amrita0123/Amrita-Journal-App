@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MudBlazor.Services;
+using MyDailyJournal.Data;
 using MyDailyJournal.MauiBlazor.Services;
 using MyDailyJournal.Services;
 
@@ -25,25 +26,27 @@ public static class MauiProgram
         builder.Logging.AddDebug();
 #endif
 
-        // Register Services
         builder.Services.AddSingleton<AuthenticationService>();
         builder.Services.AddSingleton<JournalService>();
         builder.Services.AddSingleton<StreakService>();
         builder.Services.AddMudServices();
         builder.Services.AddScoped<MoodService>();
+        builder.Services.AddScoped<SecurityService>();
 
-        
-
-        using var scope = builder.Services.BuildServiceProvider();
-        using var journalDbContext = new JournalDbContext();
-        journalDbContext.Database.Migrate();
-
-        // Initialize Database
-        using (var db = new JournalDbContext())
+        builder.Services.AddDbContext<JournalDbContext>(options =>
         {
-            db.Database.EnsureCreated();
+            var dbPath = DatabasePath.GetDatabasePath();
+            options.UseSqlite($"Data Source={dbPath}");
+        });
+
+        var app = builder.Build();
+
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<JournalDbContext>();
+            db.Database.EnsureCreated(); 
         }
 
-        return builder.Build();
+        return app;
     }
 }

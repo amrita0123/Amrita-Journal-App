@@ -1,42 +1,50 @@
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using MyDailyJournal.Data;
 using MyDailyJournal.Models;
 
 namespace MyDailyJournal.Services
 {
     public class SecurityService
     {
-        public async Task<bool> IsPinSet()
+        private readonly JournalDbContext _db;
+
+        // ✅ Inject the DbContext
+        public SecurityService(JournalDbContext db)
         {
-            using var db = new JournalDbContext();
-            return await db.AppSecurity.AnyAsync();
+            _db = db;
         }
 
+        // Check if a PIN has been set
+        public async Task<bool> IsPinSet()
+        {
+            return await _db.AppSecurity.AnyAsync();
+        }
+
+        // Set a new PIN
         public async Task SetPin(string pin)
         {
-            using var db = new JournalDbContext();
-
             var hash = HashPin(pin);
 
-            db.AppSecurity.Add(new AppSecurity
+            _db.AppSecurity.Add(new AppSecurity
             {
                 PinHash = hash
             });
 
-            await db.SaveChangesAsync();
+            await _db.SaveChangesAsync();
         }
 
+        // Verify PIN
         public async Task<bool> VerifyPin(string pin)
         {
-            using var db = new JournalDbContext();
-
-            var record = await db.AppSecurity.FirstOrDefaultAsync();
+            var record = await _db.AppSecurity.FirstOrDefaultAsync();
             if (record == null) return false;
 
             return record.PinHash == HashPin(pin);
         }
 
+        // Hashing helper
         private string HashPin(string pin)
         {
             using var sha = SHA256.Create();

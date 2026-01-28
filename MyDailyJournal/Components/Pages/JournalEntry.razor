@@ -1,6 +1,7 @@
 @page "/journal-entry"
 @page "/journal-entry/{EntryId:int}"
 @inject JournalService JournalService
+
 @inject StreakService _streakService
 @inject NavigationManager Navigation
 @using System.Collections
@@ -368,20 +369,21 @@
 
     public async Task LoadEntry()
     {
-        var entry = await JournalService.GetEntries()
-            .ContinueWith(t => t.Result.FirstOrDefault(e => e.Id == EntryId));
+        _editingEntry = await JournalService.GetEntryById(EntryId);
 
-        if (entry == null)
+        if (_editingEntry == null)
         {
             _errorMessage = "Entry not found.";
             return;
         }
 
-        _editingEntry = entry;
-        _title = entry.Title;
-        _content = entry.Content;
-        _selectedMoodId = entry.PrimaryMoodId;
+        _title = _editingEntry.Title;
+        _content = _editingEntry.Content;
+        _selectedMoodId = _editingEntry.PrimaryMoodId;
     }
+
+
+
 
 
     public int Id { get; set; }

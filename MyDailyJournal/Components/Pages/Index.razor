@@ -2,7 +2,7 @@
 @inject JournalService JournalService
 @inject StreakService StreakService
 @inject NavigationManager Navigation
-
+@inject SecurityService SecurityService
 
 
 
@@ -124,8 +124,27 @@
     // This runs when the page loads
     protected override async Task OnInitializedAsync()
     {
+        try
+        {
+            if (await SecurityService.IsPinSet())
+            {
+                Navigation.NavigateTo("/lock");
+                return;
+            }
+
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("SECURITY INIT ERROR: " + ex.Message);
+        }
         await LoadData();
     }
+
+
+       
+    
+
 
     // Load all dashboard data
     private async Task LoadData()
