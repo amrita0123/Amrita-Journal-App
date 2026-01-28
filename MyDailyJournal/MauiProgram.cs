@@ -32,6 +32,9 @@ public static class MauiProgram
         builder.Services.AddMudServices();
         builder.Services.AddScoped<MoodService>();
         builder.Services.AddScoped<SecurityService>();
+        builder.Services.AddSingleton<PdfExportService>();
+        builder.Services.AddSingleton<IFileService, FileService>();
+
 
         builder.Services.AddDbContext<JournalDbContext>(options =>
         {

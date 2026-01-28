@@ -4,6 +4,9 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Colors = Microsoft.Maui.Graphics.Colors;
+using QuestPDF.Helpers;
+
 
 namespace MyDailyJournal.Services
 {
@@ -37,19 +40,20 @@ namespace MyDailyJournal.Services
                 {
                     page.Size(PageSizes.A4);
                     page.Margin(2, Unit.Centimetre);
-                    page.PageColor(Colors.White);
+                    page.PageColor(QuestPDF.Helpers.Colors.White);
                     page.DefaultTextStyle(x => x.FontSize(12));
 
                     page.Header()
                         .Text($"Journal Entries: {startDate:MMM dd, yyyy} - {endDate:MMM dd, yyyy}")
-                        .SemiBold().FontSize(16).FontColor(Colors.Blue.Medium);
+                        .SemiBold().FontSize(16).FontColor(QuestPDF.Helpers.Colors.Blue.Medium);
+
 
                     page.Content()
                         .Column(col =>
                         {
                             foreach (var entry in entries)
                             {
-                                col.Item().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).PaddingBottom(10).Column(c =>
+                                col.Item().BorderBottom(1).BorderColor(QuestPDF.Helpers.Colors.White).PaddingBottom(10).Column(c =>
                                 {
                                     c.Item().Text($"{entry.EntryDate:dddd, MMM dd, yyyy} - {entry.Title}").Bold();
                                     c.Item().Text($"Mood: {entry.PrimaryMood?.Emoji} {entry.PrimaryMood?.Name}");

@@ -1,0 +1,77 @@
+@page "/export-journals"
+@inject PdfExportService PdfExportService
+@inject IFileService FileService   
+
+<PageTitle>Export Journals</PageTitle>
+
+<div class="container mt-4">
+    <h2>📤 Export Journals</h2>
+    <p>Select a date range to export your journal entries as a PDF.</p>
+
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <label>Start Date:</label>
+            <InputDate @bind-Value="_startDate" class="form-control" />
+        </div>
+        <div class="col-md-6">
+            <label>End Date:</label>
+            <InputDate @bind-Value="_endDate" class="form-control" />
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <button class="btn btn-primary" @onclick="ExportPdf" disabled="@_isExporting">
+            @_isExporting ? "Exporting..." : "Export PDF"
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_statusMessage))
+    {
+        <div class="alert alert-info mt-3">@_statusMessage</div>
+    }
+</div>
+
+@code {
+    private DateTime _startDate = DateTime.Now.AddDays(-7);
+    private DateTime _endDate = DateTime.Now;
+    private bool _isExporting = false;
+    private string _statusMessage;
+
+    private async Task ExportPdf()
+    {
+        _isExporting = true;
+        _statusMessage = null;
+
+        try
+        {
+            if (_endDate < _startDate)
+            {
+                _statusMessage = "End date cannot be before start date.";
+                return;
+            }
+
+            // Call service to generate PDF
+            var pdfBytes = await PdfExportService.ExportEntriesToPdf(_startDate, _endDate);
+
+            if (pdfBytes == null || pdfBytes.Length == 0)
+            {
+                _statusMessage = "No journal entries found in this date range.";
+                return;
+            }
+
+            // Save file locally
+            var fileName = $"JournalExport_{_startDate:yyyyMMdd}_{_endDate:yyyyMMdd}.pdf";
+            var filePath = await FileService.SaveFileAsync(fileName, pdfBytes);
+
+            _statusMessage = $"PDF exported successfully! Saved at: {filePath}";
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Error exporting PDF: {ex.Message}";
+        }
+        finally
+        {
+            _isExporting = false;
+        }
+    }
+}
